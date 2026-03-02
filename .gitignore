@@ -1,0 +1,64 @@
+# =========================
+# General
+# =========================
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+
+# =========================
+# IDEs
+# =========================
+*.iml
+*.ipr
+*.iws
+.idea/
+.vscode/
+
+# =========================
+# Flutter / Dart
+# =========================
+flutter/.dart_tool/
+flutter/.flutter-plugins
+flutter/.flutter-plugins-dependencies
+flutter/.pub/
+flutter/build/
+**/doc/api/
+**/ios/Flutter/.last_build_id
+
+# Never commit compiled apps
+*.apk
+*.aab
+
+# =========================
+# Android build artifacts
+# =========================
+flutter/android/app/debug/
+flutter/android/app/profile/
+flutter/android/app/release/
+
+# =========================
+# Go
+# =========================
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+*.out
+
+# Build folders
+go/bin/
+go/build/
+
+# Env / local config
+.env
+.env.*
+go/devices.json
+
+# =========================
+# Optional (if you use these)
+# =========================
+dist/
+bin/
