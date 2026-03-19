@@ -30,7 +30,7 @@ class _TouchpadHomeState extends State<TouchpadHome> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('TouchPad2'),
+        title: const Text('Trackpad Nomad'),
         actions: [
           IconButton(
             icon: const Icon(Icons.close),
@@ -70,6 +70,7 @@ class _TouchpadHomeState extends State<TouchpadHome> {
   }
 
   Widget _buildTouchpadArea() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       children: [
         Expanded(
@@ -80,7 +81,7 @@ class _TouchpadHomeState extends State<TouchpadHome> {
                   onPanUpdate: (d) => _input.handlePan(d.delta.dx, d.delta.dy),
                   onTap: () => _input.handleClick('left', ''),
                   child: Container(
-                    color: Colors.grey[200],
+                    color: isDark ? Colors.grey[850] : Colors.grey[200],
                     child: const Center(child: Text('Touch area — drag to move\nTap to click')),
                   ),
                 ),
@@ -90,7 +91,7 @@ class _TouchpadHomeState extends State<TouchpadHome> {
                 onPanUpdate: (d) => _input.handleScroll(d.delta.dy),
                 child: Container(
                   width: 60,
-                  color: Colors.grey[300],
+                  color: isDark ? Colors.grey[800] : Colors.grey[300],
                   child: const Center(
                     child: RotatedBox(
                       quarterTurns: 1,
@@ -111,7 +112,7 @@ class _TouchpadHomeState extends State<TouchpadHome> {
                 onTapUp: (_) => _input.handleClick('left', 'up'),
                 child: Container(
                   height: 80,
-                  color: Colors.blue[300],
+                  color: isDark ? Colors.blue[800] : Colors.blue[300],
                   child: const Center(child: Text('Left Click', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
                 ),
               ),
@@ -122,7 +123,7 @@ class _TouchpadHomeState extends State<TouchpadHome> {
                 onTapUp: (_) => _input.handleClick('right', 'up'),
                 child: Container(
                   height: 80,
-                  color: Colors.blue[400],
+                  color: isDark ? Colors.blue[900] : Colors.blue[400],
                   child: const Center(child: Text('Right Click', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
                 ),
               ),
@@ -133,8 +134,10 @@ class _TouchpadHomeState extends State<TouchpadHome> {
     );
   }
 
+  String _lastText = '';
+  final TextEditingController _keyboardController = TextEditingController();
+
   Widget _buildKeyboardArea() {
-    final TextEditingController ctl = TextEditingController();
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -210,16 +213,26 @@ class _TouchpadHomeState extends State<TouchpadHome> {
           const Spacer(),
           const Divider(),
           TextField(
-            controller: ctl,
+            controller: _keyboardController,
             decoration: const InputDecoration(
                 hintText: 'Type here...',
                 border: OutlineInputBorder()
             ),
             onChanged: (s) {
-              if (s.isNotEmpty) {
-                final last = s.substring(s.length - 1);
-                _input.handleKey(last);
+              if (s.length < _lastText.length) {
+                // Heuristic: Text got shorter, so user probably pressed backspace
+                int diff = _lastText.length - s.length;
+                for (int i = 0; i < diff; i++) {
+                   _input.handleKey('backspace');
+                }
+              } else if (s.length > _lastText.length) {
+                // Text got longer, user typed something
+                 final newChars = s.substring(_lastText.length);
+                 for (int i = 0; i < newChars.length; i++) {
+                    _input.handleKey(newChars[i]);
+                 }
               }
+              _lastText = s;
             },
           ),
         ],

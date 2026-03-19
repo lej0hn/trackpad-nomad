@@ -38,7 +38,11 @@ class _DeviceListPageState extends State<DeviceListPage> {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => TouchpadHome(client: _net)),
-      );
+      ).then((_) {
+        if (mounted) {
+          _loadDevices();
+        }
+      });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Connection failed: ${message ?? "Unknown error"}')),

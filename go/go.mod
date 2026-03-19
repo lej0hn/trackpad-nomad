@@ -1,6 +1,6 @@
 module touchpad2
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/go-vgo/robotgo v1.0.1
@@ -32,6 +32,7 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	golang.org/x/exp v0.0.0-20251125195548-87e1e737ad39 // indirect
 	golang.org/x/image v0.33.0 // indirect
-	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
+	golang.org/x/term v0.41.0 // indirect
 	rsc.io/qr v0.2.0 // indirect
 )

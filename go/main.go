@@ -11,7 +11,8 @@ import (
 )
 
 func main() {
-    var addr string
+	initTerminal()
+	var addr string
     var port string
     flag.StringVar(&addr, "addr", "0.0.0.0:8080", "listen address")
     flag.StringVar(&port, "port", "8080", "public port for QR pairing")
