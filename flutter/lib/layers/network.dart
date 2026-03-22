@@ -39,7 +39,15 @@ class NetworkClient {
 
       _ch = WebSocketChannel.connect(uri);
 
-      final deviceId = _generateDeviceId();
+      // Check if we already have a device saved for this host
+      // so we can reuse our device ID instead of creating a new one.
+      final existingDevices = await _sec.getDevices();
+      String deviceId = _generateDeviceId();
+      try {
+        final existing = existingDevices.firstWhere((d) => d.host == host);
+        deviceId = existing.id;
+        print("Reusing existing device ID $deviceId for host $host");
+      } catch (_) {}
 
       _sub = _ch!.stream.listen(
         (msg) => _handleMessage(msg, host, deviceId, deviceName),

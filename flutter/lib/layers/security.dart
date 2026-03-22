@@ -47,7 +47,7 @@ class Security {
 
   Future<void> saveDevice(Device device) async {
     final devices = await getDevices();
-    final index = devices.indexWhere((d) => d.id == device.id);
+    final index = devices.indexWhere((d) => d.id == device.id || d.host == device.host);
     if (index != -1) {
       devices[index] = device;
     } else {

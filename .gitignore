@@ -47,6 +47,7 @@ flutter/android/app/release/
 *.so
 *.dylib
 *.out
+trackpad-server-linux
 
 # Build folders
 go/bin/

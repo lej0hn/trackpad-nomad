@@ -57,27 +57,44 @@ class _DeviceListPageState extends State<DeviceListPage> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _devices.isEmpty
-              ? const Center(child: Text('No saved devices. Scan a QR code to pair!'))
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.devices_other, size: 80, color: Colors.grey.withOpacity(0.5)),
+                      const SizedBox(height: 16),
+                      Text('No saved devices.', style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: 8),
+                      Text('Scan a QR code to pair!', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey)),
+                    ],
+                  ),
+                )
               : ListView.builder(
+                  padding: const EdgeInsets.all(12),
                   itemCount: _devices.length,
                   itemBuilder: (context, index) {
                     final dev = _devices[index];
-                    return ListTile(
-                      leading: const Icon(Icons.computer),
-                      title: Text(dev.name),
-                      subtitle: Text(dev.host),
-                      onTap: () => _net.connectSavedDevice(dev),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () async {
-                          await _sec.removeDevice(dev.id);
-                          _loadDevices();
-                        },
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListTile(
+                        leading: const CircleAvatar(
+                          child: Icon(Icons.computer),
+                        ),
+                        title: Text(dev.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text(dev.host),
+                        onTap: () => _net.connectSavedDevice(dev),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                          onPressed: () async {
+                            await _sec.removeDevice(dev.id);
+                            _loadDevices();
+                          },
+                        ),
                       ),
                     );
                   },
                 ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           final qrData = await Navigator.push(
             context,
@@ -88,7 +105,8 @@ class _DeviceListPageState extends State<DeviceListPage> {
             _net.connectFromQr(qrData, deviceName: "My PC");
           }
         },
-        child: const Icon(Icons.qr_code_scanner),
+        icon: const Icon(Icons.qr_code_scanner),
+        label: const Text('Scan QR'),
       ),
     );
   }
