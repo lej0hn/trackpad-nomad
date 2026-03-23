@@ -20,11 +20,25 @@ class _TouchpadHomeState extends State<TouchpadHome> {
   int _selectedIndex = 0;
   bool _showBars = false;
 
+  final Map<int, Offset> _activePointers = {};
+  int _maxPointers = 0;
+  bool _hasMoved = false;
+  double _totalMovement = 0.0;
+  Offset? _lastFocalPoint;
+
   @override
   void initState() {
     super.initState();
     _net = widget.client;
     _input.onEvent = (e) => _net.sendEvent(e);
+    _net.onClipboardReceived = (text) {
+      Clipboard.setData(ClipboardData(text: text));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Copied from PC to phone clipboard')),
+        );
+      }
+    };
   }
 
   @override
@@ -73,7 +87,10 @@ class _TouchpadHomeState extends State<TouchpadHome> {
                     child: Builder(builder: (context) {
                       return IconButton(
                         style: IconButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh.withOpacity(0.8),
+                          backgroundColor: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHigh
+                              .withOpacity(0.8),
                         ),
                         icon: const Icon(Icons.keyboard_arrow_up),
                         onPressed: () => setState(() => _showBars = true),
@@ -108,6 +125,70 @@ class _TouchpadHomeState extends State<TouchpadHome> {
     );
   }
 
+  void _recalculateFocalPoint() {
+    if (_activePointers.isEmpty) {
+      _lastFocalPoint = null;
+      return;
+    }
+    double x = 0;
+    double y = 0;
+    for (final pos in _activePointers.values) {
+      x += pos.dx;
+      y += pos.dy;
+    }
+    _lastFocalPoint =
+        Offset(x / _activePointers.length, y / _activePointers.length);
+  }
+
+  void _handlePointerDown(PointerDownEvent event) {
+    _activePointers[event.pointer] = event.position;
+    if (_activePointers.length > _maxPointers) {
+      _maxPointers = _activePointers.length;
+    }
+    _recalculateFocalPoint();
+  }
+
+  void _handlePointerMove(PointerMoveEvent event) {
+    if (_activePointers.containsKey(event.pointer)) {
+      _activePointers[event.pointer] = event.position;
+      final oldFocal = _lastFocalPoint;
+      _recalculateFocalPoint();
+
+      if (oldFocal != null && _lastFocalPoint != null) {
+        final delta = _lastFocalPoint! - oldFocal;
+        _totalMovement += delta.distance;
+        if (_totalMovement > 2.5) {
+          _hasMoved = true;
+        }
+
+        if (_activePointers.length == 1) {
+          _input.handlePan(event.delta.dx, event.delta.dy);
+        } else if (_activePointers.length >= 2) {
+          _input.handleScroll(delta.dy);
+        }
+      }
+    }
+  }
+
+  void _handlePointerUp(PointerEvent event) {
+    _activePointers.remove(event.pointer);
+    _recalculateFocalPoint();
+
+    if (_activePointers.isEmpty) {
+      if (!_hasMoved) {
+        if (_maxPointers == 1) {
+          _input.handleClick('left', '');
+        } else if (_maxPointers == 3) {
+          _input.handleClick('right', '');
+        }
+      }
+      _maxPointers = 0;
+      _hasMoved = false;
+      _totalMovement = 0.0;
+      _lastFocalPoint = null;
+    }
+  }
+
   Widget _buildTouchpadArea() {
     return OrientationBuilder(
       builder: (context, orientation) {
@@ -115,8 +196,6 @@ class _TouchpadHomeState extends State<TouchpadHome> {
         final theme = Theme.of(context);
         final isDark = theme.brightness == Brightness.dark;
         final surfaceColor = isDark ? Colors.grey[850] : Colors.grey[200];
-        final scrollColor = isDark ? Colors.grey[800] : Colors.grey[300];
-        
         return Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -131,43 +210,20 @@ class _TouchpadHomeState extends State<TouchpadHome> {
                         elevation: 4,
                         shadowColor: Colors.black26,
                         clipBehavior: Clip.antiAlias,
-                        child: GestureDetector(
-                          onPanUpdate: (d) => _input.handlePan(d.delta.dx, d.delta.dy),
-                          child: InkWell(
-                            onTap: () => _input.handleClick('left', ''),
-                            child: const Center(
-                              child: Text(
-                                'Touch area — drag to move\nTap to click',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    // Scroll Area
-                    Card(
-                      margin: EdgeInsets.zero,
-                      color: scrollColor,
-                      elevation: 4,
-                      shadowColor: Colors.black26,
-                      clipBehavior: Clip.antiAlias,
-                      child: GestureDetector(
-                        onPanUpdate: (d) => _input.handleScroll(d.delta.dy),
-                        child: SizedBox(
-                          width: 60,
-                          child: InkWell(
-                            onTap: () {}, // Just for ripple if tapped
-                            child: const Center(
-                              child: RotatedBox(
-                                quarterTurns: 1,
-                                child: Text(
-                                  'SCROLL',
-                                  style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, letterSpacing: 2),
-                                ),
-                              ),
+                        child: Listener(
+                          onPointerDown: _handlePointerDown,
+                          onPointerMove: _handlePointerMove,
+                          onPointerUp: _handlePointerUp,
+                          onPointerCancel: _handlePointerUp,
+                          behavior: HitTestBehavior.opaque,
+                          child: const Center(
+                            child: Text(
+                              'Touch area — 1-finger move, 2-finger scroll\nTap: 1-finger Left Click, 3-finger Right Click',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 16,
+                                  color: Colors.grey),
                             ),
                           ),
                         ),
@@ -195,7 +251,10 @@ class _TouchpadHomeState extends State<TouchpadHome> {
                           alignment: Alignment.center,
                           child: Text(
                             'Left Click',
-                            style: TextStyle(color: theme.colorScheme.onPrimary, fontWeight: FontWeight.bold, fontSize: 16),
+                            style: TextStyle(
+                                color: theme.colorScheme.onPrimary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16),
                           ),
                         ),
                       ),
@@ -217,7 +276,10 @@ class _TouchpadHomeState extends State<TouchpadHome> {
                           alignment: Alignment.center,
                           child: Text(
                             'Right Click',
-                            style: TextStyle(color: theme.colorScheme.onPrimaryContainer, fontWeight: FontWeight.bold, fontSize: 16),
+                            style: TextStyle(
+                                color: theme.colorScheme.onPrimaryContainer,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16),
                           ),
                         ),
                       ),
@@ -240,13 +302,71 @@ class _TouchpadHomeState extends State<TouchpadHome> {
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
-          const Text("Shortcuts", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const Text("Clipboard Sync",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  icon: const Icon(Icons.download),
+                  label: const Text('From PC'),
+                  onPressed: () {
+                    _net.requestClipboard();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('Requesting PC clipboard...')));
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: FilledButton.icon(
+                  icon: const Icon(Icons.upload),
+                  label: const Text('To PC'),
+                  onPressed: () async {
+                    final data = await Clipboard.getData(Clipboard.kTextPlain);
+                    if (data != null &&
+                        data.text != null &&
+                        data.text!.isNotEmpty) {
+                      _net.sendClipboard(data.text!);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Sent phone clipboard to PC')));
+                      }
+                    } else {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Phone clipboard is empty')));
+                      }
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          const Divider(),
+          const SizedBox(height: 16),
+          const Text("Shortcuts",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 16),
           Wrap(
             spacing: 12,
             runSpacing: 12,
             alignment: WrapAlignment.center,
             children: [
+              FilledButton.tonal(
+                onPressed: () => _input.handleKey('c', modifiers: ['ctrl']),
+                child: const Text('Copy (Ctrl+C)'),
+              ),
+              FilledButton.tonal(
+                onPressed: () => _input.handleKey('v', modifiers: ['ctrl']),
+                child: const Text('Paste (Ctrl+V)'),
+              ),
               FilledButton.tonal(
                 onPressed: () => _input.handleKey('f'),
                 child: const Text('Maximize (F)'),
@@ -268,7 +388,8 @@ class _TouchpadHomeState extends State<TouchpadHome> {
           const SizedBox(height: 32),
           const Divider(),
           const SizedBox(height: 16),
-          const Text("Arrows & Edit Keys", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const Text("Arrows & Edit Keys",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -325,7 +446,8 @@ class _TouchpadHomeState extends State<TouchpadHome> {
             controller: _keyboardController,
             decoration: InputDecoration(
               hintText: 'Type here...',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               filled: true,
             ),
             onChanged: (s) {
@@ -333,14 +455,14 @@ class _TouchpadHomeState extends State<TouchpadHome> {
                 // Heuristic: Text got shorter, so user probably pressed backspace
                 int diff = _lastText.length - s.length;
                 for (int i = 0; i < diff; i++) {
-                   _input.handleKey('backspace');
+                  _input.handleKey('backspace');
                 }
               } else if (s.length > _lastText.length) {
                 // Text got longer, user typed something
-                 final newChars = s.substring(_lastText.length);
-                 for (int i = 0; i < newChars.length; i++) {
-                    _input.handleKey(newChars[i]);
-                 }
+                final newChars = s.substring(_lastText.length);
+                for (int i = 0; i < newChars.length; i++) {
+                  _input.handleKey(newChars[i]);
+                }
               }
               _lastText = s;
             },

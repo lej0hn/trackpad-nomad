@@ -11,8 +11,9 @@ import (
 )
 
 type MouseDelta struct {
-    DX float64
-    DY float64
+    DX       float64
+    DY       float64
+    ScrollDY float64
 }
 
 type Server struct {
@@ -39,10 +40,10 @@ func (s *Server) processMouseEvents() {
     ticker := time.NewTicker(10 * time.Millisecond) // ~100Hz
     defer ticker.Stop()
 
-    var remX, remY float64
+    var remX, remY, remScroll float64
 
     for range ticker.C {
-        var dx, dy float64
+        var dx, dy, scrollDy float64
         drained := false
     drainLoop:
         for {
@@ -50,24 +51,31 @@ func (s *Server) processMouseEvents() {
             case delta := <-s.mouseEvents:
                 dx += delta.DX
                 dy += delta.DY
+                scrollDy += delta.ScrollDY
                 drained = true
             default:
                 break drainLoop
             }
         }
         
-        if drained || remX != 0 || remY != 0 {
+        if drained || remX != 0 || remY != 0 || remScroll != 0 {
             totalX := dx + remX
             totalY := dy + remY
+            totalS := scrollDy + remScroll
 
             moveX := int(totalX)
             moveY := int(totalY)
+            scrollAmt := int(totalS)
 
             remX = totalX - float64(moveX)
             remY = totalY - float64(moveY)
+            remScroll = totalS - float64(scrollAmt)
 
             if moveX != 0 || moveY != 0 {
                 s.injector.Move(moveX, moveY)
+            }
+            if scrollAmt != 0 {
+                s.injector.Scroll(scrollAmt)
             }
         }
     }
@@ -183,9 +191,10 @@ func (s *Server) HandleWS(w http.ResponseWriter, r *http.Request) {
             }
             // dispatch event
             if evt, ok := msg["eventType"].(string); ok {
-                payload := msg["payload"].(map[string]interface{})
-                // log.Printf("Received event: %s with payload: %v\n", evt, payload)
-                s.handleEvent(evt, payload)
+                payload, _ := msg["payload"].(map[string]interface{})
+                s.handleEvent(evt, payload, func(m map[string]interface{}) {
+                    conn.WriteJSON(m)
+                })
                 // ack (skip for high-frequency events to prevent write blocking)
                 if evt != "mouse_move" && evt != "scroll" {
                     if seq, ok := msg["seq"].(float64); ok {
@@ -199,7 +208,7 @@ func (s *Server) HandleWS(w http.ResponseWriter, r *http.Request) {
     }
 }
 
-func (s *Server) handleEvent(evt string, payload map[string]interface{}) {
+func (s *Server) handleEvent(evt string, payload map[string]interface{}, sendReply func(map[string]interface{})) {
     switch evt {
     case "mouse_move":
         dx := toFloat(payload["dx"])
@@ -215,7 +224,10 @@ func (s *Server) handleEvent(evt string, payload map[string]interface{}) {
         s.injector.Click(btn, action)
     case "scroll":
         dy := toFloat(payload["dy"])
-        s.injector.Scroll(int(dy))
+        select {
+        case s.mouseEvents <- MouseDelta{ScrollDY: dy}:
+        default:
+        }
     case "key":
         key, _ := payload["key"].(string)
         action, _ := payload["action"].(string)
@@ -230,6 +242,16 @@ func (s *Server) handleEvent(evt string, payload map[string]interface{}) {
         }
         
         s.injector.Key(key, action, modifiers)
+    case "clipboard_set":
+        if text, ok := payload["text"].(string); ok {
+            s.injector.WriteClipboard(text)
+        }
+    case "clipboard_get":
+        text := s.injector.ReadClipboard()
+        sendReply(map[string]interface{}{
+            "type": "clipboard_data",
+            "text": text,
+        })
     default:
         log.Println("unhandled event:", evt)
     }

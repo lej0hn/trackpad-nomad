@@ -11,6 +11,8 @@ type InputInjector interface {
     Click(button, action string)
     Scroll(dy int)
     Key(key, action string, modifiers []string)
+    WriteClipboard(text string)
+    ReadClipboard() string
 }
 
 // LoggerInjector is a simple injector that logs incoming events.
@@ -30,6 +32,15 @@ func (l *LoggerInjector) Scroll(dy int) {
 
 func (l *LoggerInjector) Key(key, action string, modifiers []string) {
     log.Printf("Key: key=%s action=%s modifiers=%v\n", key, action, modifiers)
+}
+
+func (l *LoggerInjector) WriteClipboard(text string) {
+    log.Printf("WriteClipboard: %s\n", text)
+}
+
+func (l *LoggerInjector) ReadClipboard() string {
+    log.Printf("ReadClipboard\n")
+    return ""
 }
 
 // RobotGoInjector uses go-vgo/robotgo to control OS input
@@ -86,4 +97,13 @@ func (r *RobotGoInjector) Key(key, action string, modifiers []string) {
             robotgo.KeyTap(key)
         }
     }
+}
+
+func (r *RobotGoInjector) WriteClipboard(text string) {
+    robotgo.WriteAll(text)
+}
+
+func (r *RobotGoInjector) ReadClipboard() string {
+    text, _ := robotgo.ReadAll()
+    return text
 }
