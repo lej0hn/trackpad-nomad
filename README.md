@@ -1,5 +1,5 @@
 <h1 align="center">
-  🌐 Trackpad Nomad 🖱️
+  <img src="assets/icon.png" width="32" /> Trackpad Nomad 🖱️
 </h1>
 
 <p align="center">
