@@ -47,7 +47,6 @@ flutter/android/app/release/
 *.so
 *.dylib
 *.out
-trackpad-server-linux
 
 # Build folders
 go/bin/
@@ -63,3 +62,14 @@ go/devices.json
 # =========================
 dist/
 bin/
+
+# Local Android Properties
+flutter/android/local.properties
+flutter/android/key.properties
+
+# Flutter iOS/macOS generated files
+flutter/ios/Flutter/flutter_export_environment.sh
+flutter/macos/Flutter/ephemeral/
+
+# Additional Go binaries
+trackpad-server-*
