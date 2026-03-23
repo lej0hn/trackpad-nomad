@@ -1,16 +1,14 @@
-<h1 align="center">
-  <img src="flutter/assets/icon.png" width="32" /> Trackpad Nomad 🖱️
-</h1>
+<div align="center">
+  <img src="flutter/assets/icon.png" width="128" alt="Trackpad Nomad Logo" />
+  <h1>Trackpad Nomad 🖱️</h1>
+  <p><strong>Turn your smartphone into a fast, secure, and wireless trackpad & keyboard for your computer.</strong></p>
 
-<p align="center">
-  <strong>Turn your smartphone into a fast, secure, and wireless trackpad & keyboard for your computer.</strong>
-</p>
-
-<p align="center">
-  <img alt="GitHub Release" src="https://img.shields.io/github/v/release/lej0hn/trackpad-nomad?style=for-the-badge">
-  <img alt="Flutter App" src="https://img.shields.io/badge/Flutter-%2302569B.svg?style=for-the-badge&logo=Flutter&logoColor=white">
-  <img alt="Go Backend" src="https://img.shields.io/badge/Go-%2300ADD8.svg?style=for-the-badge&logo=go&logoColor=white">
-</p>
+  <p>
+    <img alt="GitHub Release" src="https://img.shields.io/github/v/release/lej0hn/trackpad-nomad?style=for-the-badge">
+    <img alt="Flutter App" src="https://img.shields.io/badge/Flutter-%2302569B.svg?style=for-the-badge&logo=Flutter&logoColor=white">
+    <img alt="Go Backend" src="https://img.shields.io/badge/Go-%2300ADD8.svg?style=for-the-badge&logo=go&logoColor=white">
+  </p>
+</div>
 
 ---
 
