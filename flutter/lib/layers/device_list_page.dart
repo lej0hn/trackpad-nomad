@@ -37,7 +37,7 @@ class _DeviceListPageState extends State<DeviceListPage> {
     if (success) {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => TouchpadHome(client: _net)),
+        MaterialPageRoute(builder: (_) => TrackpadHome(client: _net)),
       ).then((_) {
         if (mounted) {
           _loadDevices();

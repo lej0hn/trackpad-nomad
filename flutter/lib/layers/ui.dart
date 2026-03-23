@@ -5,15 +5,15 @@ import 'qr_scan_page.dart';
 import 'input_processor.dart';
 import 'security.dart';
 
-class TouchpadHome extends StatefulWidget {
+class TrackpadHome extends StatefulWidget {
   final NetworkClient client;
-  const TouchpadHome({super.key, required this.client});
+  const TrackpadHome({super.key, required this.client});
 
   @override
-  State<TouchpadHome> createState() => _TouchpadHomeState();
+  State<TrackpadHome> createState() => _TrackpadHomeState();
 }
 
-class _TouchpadHomeState extends State<TouchpadHome> {
+class _TrackpadHomeState extends State<TrackpadHome> {
   late final NetworkClient _net;
   final InputProcessor _input = InputProcessor();
 
@@ -74,7 +74,7 @@ class _TouchpadHomeState extends State<TouchpadHome> {
               IndexedStack(
                 index: _selectedIndex,
                 children: [
-                  _buildTouchpadArea(),
+                  _buildTrackpadArea(),
                   _buildKeyboardArea(),
                 ],
               ),
@@ -112,7 +112,7 @@ class _TouchpadHomeState extends State<TouchpadHome> {
                   items: const [
                     BottomNavigationBarItem(
                       icon: Icon(Icons.touch_app),
-                      label: 'Touchpad',
+                      label: 'Trackpad',
                     ),
                     BottomNavigationBarItem(
                       icon: Icon(Icons.keyboard),
@@ -189,7 +189,7 @@ class _TouchpadHomeState extends State<TouchpadHome> {
     }
   }
 
-  Widget _buildTouchpadArea() {
+  Widget _buildTrackpadArea() {
     return OrientationBuilder(
       builder: (context, orientation) {
         final isLandscape = orientation == Orientation.landscape;

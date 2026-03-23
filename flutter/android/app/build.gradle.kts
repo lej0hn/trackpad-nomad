@@ -5,13 +5,13 @@ plugins {
 }
 
 android {
-    namespace = "com.example.touchpad2_client"
+    namespace = "com.example.trackpadNomad_client"
     compileSdk = 34
 
     ndkVersion = "27.0.12077973"
 
     defaultConfig {
-        applicationId = "com.example.touchpad2_client"
+        applicationId = "com.example.trackpadNomad_client"
         minSdk = 21
         targetSdk = 34
         versionCode = 1

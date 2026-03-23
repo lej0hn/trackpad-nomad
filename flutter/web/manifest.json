@@ -1,6 +1,6 @@
 {
-    "name": "touchpad2_client",
-    "short_name": "touchpad2_client",
+    "name": "trackpadNomad_client",
+    "short_name": "trackpadNomad_client",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

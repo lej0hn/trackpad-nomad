@@ -3,11 +3,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'layers/device_list_page.dart';
 
 void main() {
-  runApp(const TouchpadApp());
+  runApp(const TrackpadApp());
 }
 
-class TouchpadApp extends StatelessWidget {
-  const TouchpadApp({super.key});
+class TrackpadApp extends StatelessWidget {
+  const TrackpadApp({super.key});
 
   @override
   Widget build(BuildContext context) {
