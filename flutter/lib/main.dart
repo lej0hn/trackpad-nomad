@@ -28,9 +28,10 @@ class TouchpadApp extends StatelessWidget {
             letterSpacing: -0.5,
           ),
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
       darkTheme: ThemeData(
@@ -48,9 +49,10 @@ class TouchpadApp extends StatelessWidget {
             letterSpacing: -0.5,
           ),
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
       themeMode: ThemeMode.system,
