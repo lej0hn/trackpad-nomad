@@ -5,25 +5,72 @@ import (
     "log"
     "net"
     "net/http"
+    "time"
 
     "github.com/gorilla/websocket"
 )
 
+type MouseDelta struct {
+    DX float64
+    DY float64
+}
+
 type Server struct {
-    token    string
-    upgrader websocket.Upgrader
-    injector InputInjector
-    registry *DeviceRegistry
+    token       string
+    upgrader    websocket.Upgrader
+    injector    InputInjector
+    registry    *DeviceRegistry
+    mouseEvents chan MouseDelta
 }
 
 func NewServer() *Server {
     s := &Server{
-        token:    GenerateToken(),
-        upgrader: websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }},
-        injector: &RobotGoInjector{},
-        registry: NewDeviceRegistry("devices.json"),
+        token:       GenerateToken(),
+        upgrader:    websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }},
+        injector:    &RobotGoInjector{},
+        registry:    NewDeviceRegistry("devices.json"),
+        mouseEvents: make(chan MouseDelta, 1000),
     }
+    go s.processMouseEvents()
     return s
+}
+
+func (s *Server) processMouseEvents() {
+    ticker := time.NewTicker(10 * time.Millisecond) // ~100Hz
+    defer ticker.Stop()
+
+    var remX, remY float64
+
+    for range ticker.C {
+        var dx, dy float64
+        drained := false
+    drainLoop:
+        for {
+            select {
+            case delta := <-s.mouseEvents:
+                dx += delta.DX
+                dy += delta.DY
+                drained = true
+            default:
+                break drainLoop
+            }
+        }
+        
+        if drained || remX != 0 || remY != 0 {
+            totalX := dx + remX
+            totalY := dy + remY
+
+            moveX := int(totalX)
+            moveY := int(totalY)
+
+            remX = totalX - float64(moveX)
+            remY = totalY - float64(moveY)
+
+            if moveX != 0 || moveY != 0 {
+                s.injector.Move(moveX, moveY)
+            }
+        }
+    }
 }
 
 func GetLocalIP() string {
@@ -139,9 +186,11 @@ func (s *Server) HandleWS(w http.ResponseWriter, r *http.Request) {
                 payload := msg["payload"].(map[string]interface{})
                 // log.Printf("Received event: %s with payload: %v\n", evt, payload)
                 s.handleEvent(evt, payload)
-                // ack
-                if seq, ok := msg["seq"].(float64); ok {
-                    conn.WriteJSON(map[string]interface{}{"type":"ack","seq":int(seq)})
+                // ack (skip for high-frequency events to prevent write blocking)
+                if evt != "mouse_move" && evt != "scroll" {
+                    if seq, ok := msg["seq"].(float64); ok {
+                        conn.WriteJSON(map[string]interface{}{"type":"ack","seq":int(seq)})
+                    }
                 }
             }
         default:
@@ -155,7 +204,11 @@ func (s *Server) handleEvent(evt string, payload map[string]interface{}) {
     case "mouse_move":
         dx := toFloat(payload["dx"])
         dy := toFloat(payload["dy"])
-        s.injector.Move(int(dx), int(dy))
+        select {
+        case s.mouseEvents <- MouseDelta{DX: dx, DY: dy}:
+        default:
+            // Drop gracefully if saturated
+        }
     case "mouse_click":
         btn, _ := payload["button"].(string)
         action, _ := payload["action"].(string)

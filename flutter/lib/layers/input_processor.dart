@@ -4,8 +4,8 @@ typedef EventCallback = void Function(Map<String, dynamic> evt);
 
 class InputProcessor {
   EventCallback? onEvent;
-  
-  // Throttle mouse moves to max ~60Hz
+
+  // Throttle mouse moves
   int _lastMoveTime = 0;
   final double sensitivity = 3.5;
 
@@ -17,10 +17,7 @@ class InputProcessor {
     onEvent?.call({
       'type': 'event',
       'eventType': 'mouse_move',
-      'payload': {
-        'dx': (dx * sensitivity).toInt(),
-        'dy': (dy * sensitivity).toInt()
-      },
+      'payload': {'dx': dx * sensitivity, 'dy': dy * sensitivity},
       'seq': now,
     });
   }
@@ -33,13 +30,13 @@ class InputProcessor {
       'seq': DateTime.now().millisecondsSinceEpoch,
     });
   }
-  
+
   void handleScroll(double dy) {
     onEvent?.call({
-        'type': 'event',
-        'eventType': 'scroll',
-        'payload': {'dy': (dy * sensitivity).toInt()},
-        'seq': DateTime.now().millisecondsSinceEpoch,
+      'type': 'event',
+      'eventType': 'scroll',
+      'payload': {'dy': dy * sensitivity},
+      'seq': DateTime.now().millisecondsSinceEpoch,
     });
   }
 

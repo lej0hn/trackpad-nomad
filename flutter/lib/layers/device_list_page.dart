@@ -45,7 +45,8 @@ class _DeviceListPageState extends State<DeviceListPage> {
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Connection failed: ${message ?? "Unknown error"}')),
+        SnackBar(
+            content: Text('Connection failed: ${message ?? "Unknown error"}')),
       );
     }
   }
@@ -61,11 +62,17 @@ class _DeviceListPageState extends State<DeviceListPage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.devices_other, size: 80, color: Colors.grey.withOpacity(0.5)),
+                      Icon(Icons.devices_other,
+                          size: 80, color: Colors.grey.withValues(alpha: 128)),
                       const SizedBox(height: 16),
-                      Text('No saved devices.', style: Theme.of(context).textTheme.titleLarge),
+                      Text('No saved devices.',
+                          style: Theme.of(context).textTheme.titleLarge),
                       const SizedBox(height: 8),
-                      Text('Scan a QR code to pair!', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey)),
+                      Text('Scan a QR code to pair!',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(color: Colors.grey)),
                     ],
                   ),
                 )
@@ -80,11 +87,14 @@ class _DeviceListPageState extends State<DeviceListPage> {
                         leading: const CircleAvatar(
                           child: Icon(Icons.computer),
                         ),
-                        title: Text(dev.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        title: Text(dev.name,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Text(dev.host),
                         onTap: () => _net.connectSavedDevice(dev),
                         trailing: IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                          icon: const Icon(Icons.delete_outline,
+                              color: Colors.redAccent),
                           onPressed: () async {
                             await _sec.removeDevice(dev.id);
                             _loadDevices();
