@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="assets/icon.png" width="32" /> Trackpad Nomad 🖱️
+  <img src="flutter/assets/icon.png" width="32" /> Trackpad Nomad 🖱️
 </h1>
 
 <p align="center">
