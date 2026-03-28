@@ -223,7 +223,7 @@ func (s *Server) handleEvent(evt string, payload map[string]interface{}, sendRep
         action, _ := payload["action"].(string)
         s.injector.Click(btn, action)
     case "scroll":
-        dy := toFloat(payload["dy"])
+        dy := toFloat(payload["dy"]) * 0.05
         select {
         case s.mouseEvents <- MouseDelta{ScrollDY: dy}:
         default:
