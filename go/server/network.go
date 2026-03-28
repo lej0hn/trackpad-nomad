@@ -22,18 +22,39 @@ type Server struct {
     injector    InputInjector
     registry    *DeviceRegistry
     mouseEvents chan MouseDelta
+    
+    // Rate limiting for "heavy" events (clicks, keys)
+    eventLimit    int           // max events per window
+    eventWindow   time.Duration
+    eventCounter  map[string]int // deviceID -> count
+    counterMutex  time.Ticker   // reusing ticker for cleanup or use sync.Mutex
 }
 
 func NewServer() *Server {
     s := &Server{
         token:       GenerateToken(),
-        upgrader:    websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }},
+        upgrader:    websocket.Upgrader{
+            CheckOrigin: func(r *http.Request) bool { return true },
+            ReadBufferSize:  1024,
+            WriteBufferSize: 1024,
+        },
         injector:    &RobotGoInjector{},
         registry:    NewDeviceRegistry("devices.json"),
         mouseEvents: make(chan MouseDelta, 1000),
     }
-    go s.processMouseEvents()
+    go s.safeGo(s.processMouseEvents)
     return s
+}
+
+func (s *Server) safeGo(f func()) {
+    go func() {
+        defer func() {
+            if r := recover(); r != nil {
+                log.Printf("RECOVERED from panic in goroutine: %v", r)
+            }
+        }()
+        f()
+    }()
 }
 
 func (s *Server) processMouseEvents() {
@@ -122,12 +143,45 @@ func (s *Server) HandleWS(w http.ResponseWriter, r *http.Request) {
     defer conn.Close()
     log.Println("New WebSocket connection established")
 
+    // Set read limit and deadlines
+    conn.SetReadLimit(64 * 1024) // 64KB max message size
+    conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+    conn.SetPongHandler(func(string) error {
+        conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+        return nil
+    })
+
+    // Start heartbeat goroutine
+    stopHeartbeat := make(chan struct{})
+    s.safeGo(func() {
+        ticker := time.NewTicker(20 * time.Second)
+        defer ticker.Stop()
+        for {
+            select {
+            case <-ticker.C:
+                if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+                    return
+                }
+            case <-stopHeartbeat:
+                return
+            }
+        }
+    })
+    defer close(stopHeartbeat)
+
     authenticated := false
+    var deviceID string
+
+    // Simple per-connection rate limiting state for "heavy" events
+    lastHeavyEvent := time.Now()
+    heavyEventCount := 0
 
     for {
         var msg map[string]interface{}
         if err := conn.ReadJSON(&msg); err != nil {
-            log.Println("read json err:", err)
+            if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+                log.Printf("WS read error: %v", err)
+            }
             return
         }
         t, _ := msg["type"].(string)
@@ -189,14 +243,35 @@ func (s *Server) HandleWS(w http.ResponseWriter, r *http.Request) {
                 conn.WriteJSON(map[string]interface{}{"type":"error","reason":"not authed"})
                 return
             }
+
+            // Rate limiting for "heavy" events
+            evt, _ := msg["eventType"].(string)
+            isHeavy := evt != "mouse_move" && evt != "scroll"
+
+            if isHeavy {
+                now := time.Now()
+                if now.Sub(lastHeavyEvent) > time.Second {
+                    lastHeavyEvent = now
+                    heavyEventCount = 0
+                }
+                heavyEventCount++
+                if heavyEventCount > 30 { // 30 per second is generous but safe
+                    log.Printf("Rate limit exceeded for device %s (%s). Potential malicious activity. Disconnecting.", deviceID, evt)
+                    conn.WriteJSON(map[string]interface{}{"type":"error","reason":"rate_limit_exceeded"})
+                    return
+                }
+            }
+
             // dispatch event
-            if evt, ok := msg["eventType"].(string); ok {
+            if evt != "" {
                 payload, _ := msg["payload"].(map[string]interface{})
                 s.handleEvent(evt, payload, func(m map[string]interface{}) {
                     conn.WriteJSON(m)
                 })
                 // ack (skip for high-frequency events to prevent write blocking)
-                if evt != "mouse_move" && evt != "scroll" {
+                if !isHeavy { 
+                    // No ack for mouse_move/scroll
+                } else {
                     if seq, ok := msg["seq"].(float64); ok {
                         conn.WriteJSON(map[string]interface{}{"type":"ack","seq":int(seq)})
                     }
@@ -223,7 +298,7 @@ func (s *Server) handleEvent(evt string, payload map[string]interface{}, sendRep
         action, _ := payload["action"].(string)
         s.injector.Click(btn, action)
     case "scroll":
-        dy := toFloat(payload["dy"])
+        dy := toFloat(payload["dy"]) * 0.05 // Reduce scroll sensitivity (slower)
         select {
         case s.mouseEvents <- MouseDelta{ScrollDY: dy}:
         default:
@@ -244,6 +319,10 @@ func (s *Server) handleEvent(evt string, payload map[string]interface{}, sendRep
         s.injector.Key(key, action, modifiers)
     case "clipboard_set":
         if text, ok := payload["text"].(string); ok {
+            if len(text) > 100000 { // 100k chars limit
+                log.Println("Clipboard text too long, truncated")
+                text = text[:100000]
+            }
             s.injector.WriteClipboard(text)
         }
     case "clipboard_get":
