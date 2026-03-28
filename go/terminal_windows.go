@@ -4,15 +4,15 @@ package main
 
 import (
 	"os"
-	"syscall"
+	"golang.org/x/sys/windows"
 )
 
 func initTerminal() {
-	handle := syscall.Handle(os.Stdout.Fd())
+	handle := windows.Handle(os.Stdout.Fd())
 	var mode uint32
-	if err := syscall.GetConsoleMode(handle, &mode); err == nil {
+	if err := windows.GetConsoleMode(handle, &mode); err == nil {
 		// ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
 		mode |= 0x0004
-		syscall.SetConsoleMode(handle, mode)
+		windows.SetConsoleMode(handle, mode)
 	}
 }
