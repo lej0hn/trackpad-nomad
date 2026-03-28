@@ -82,19 +82,17 @@ func (s *Server) processMouseEvents() {
 }
 
 func GetLocalIP() string {
-	addrs, err := net.InterfaceAddrs()
+	// Use UDP "dial" to a public IP to force OS to choose the best local interface
+	// This doesn't actually send any packets since it's UDP.
+	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {
+		// Fallback to loopback if no network
 		return "127.0.0.1"
 	}
+	defer conn.Close()
 
-	for _, addr := range addrs {
-		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				return ipnet.IP.String()
-			}
-		}
-	}
-	return "127.0.0.1"
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	return localAddr.IP.String()
 }
 
 func (s *Server) PrintPairingInfo(port string) {
