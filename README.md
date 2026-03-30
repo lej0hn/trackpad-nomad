@@ -42,7 +42,7 @@ From the same [Releases page](https://github.com/lej0hn/trackpad-nomad/releases)
 - **Linux**: `trackpad-server-linux-amd64`
 
 ### Step 3: Run and Pair!
-1. Run the server executable on your computer. A QR code will instantly appear in your terminal.
+1. Run the server executable on your computer (Allow access for private networks in firewall prompt). A QR code will instantly appear in your terminal.
 2. Ensure both your phone and computer are on the **same WiFi network**.
 3. Open the **Trackpad Nomad** app on your phone.
 4. Scan the QR code, and you are instantly connected!
